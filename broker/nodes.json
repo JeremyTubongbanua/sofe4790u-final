@@ -1,0 +1,15 @@
+[
+    {
+        "name": "node0",
+        "host": "localhost",
+        "models": [
+            {
+                "name": "test",
+                "type": "mobilenet",
+                "epochs": 3,
+                "batchSize": 32,
+                "learningRate": 0.0001
+            }
+        ]
+    }
+]
