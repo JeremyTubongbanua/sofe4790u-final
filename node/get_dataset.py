@@ -1,6 +1,6 @@
 import requests, zipfile, io, os, shutil
 
-url = 'https://github.com/JeremyTubongbanua/sofe4790u-final/raw/main/ml/dataset.zip'
+url = 'https://github.com/JeremyTubongbanua/sofe4790u-final/raw/main/dataset.zip'
 
 response = requests.get(url)
 if response.status_code == 200:
