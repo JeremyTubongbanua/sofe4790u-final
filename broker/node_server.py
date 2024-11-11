@@ -1,206 +1,21 @@
-#!/usr/bin/env python3
-# node_server.py
-import socket
 import threading
-import json
 import signal
 import sys
-from flask import Flask, request, jsonify, send_file, Response
-from flask_cors import CORS
-import os
-import select
-import time
-
-json_responses = {}
-
-DEFAULT_HOST = "127.0.0.1"
-CLIENT_PORT = 8000
-API_PORT = 8001
-
-nodes = []
-client_socket = None
-
-app = Flask(__name__)
-CORS(app)
-
-def log_message(action, target, message):
-    print(f"[LOG] Action: {action}, Target: {target}, Message: {message}")
-
-def remove_node(node_name):
-    global nodes
-    nodes = [node for node in nodes if node["name"] != node_name]
-
-def register_node(client_socket, address, node_name):
-    node_info = {
-        "name": node_name,
-        "host": address[0],
-        "port": address[1],
-        "models": []
-    }
-    nodes.append({"socket": client_socket, **node_info})
-    send_json_message(client_socket, {"type": "SERVER ACK"}, node_name)
-
-def send_json_message(client_socket, response, target_name=None):
-    try:
-        message = json.dumps(response)
-        client_socket.sendall(message.encode())
-        log_message("SEND", target_name or "Unknown", response)
-    except Exception as e:
-        print(f"Error sending message: {e}")
-
-def handle_client_message(client_socket, address, message):
-    msg_type = message["type"]
-    node_name = message.get("name")
-    log_message("RECEIVE", node_name, message)
-
-    if msg_type == "CLIENT CONNECT":
-        register_node(client_socket, address, node_name)
-    elif msg_type == "CLIENT PING":
-        send_json_message(client_socket, {"type": "SERVER PONG"}, node_name)
-    elif msg_type == "CLIENT DISCONNECT":
-        remove_node(node_name)
-        send_json_message(client_socket, {"type": "SERVER ACK"}, node_name)
-        return False
-    elif msg_type == "JSON_RESPONSE":
-        node_name = message.get("name", "Unknown")
-        json_data = message["data"]
-        json_key = f"{node_name}:{message['json_name']}"
-        json_responses[json_key] = json_data
-        log_message("RECEIVE", node_name, json_data)
-    return True
-
-def forward_train_message(train_message):
-    if not nodes:
-        print("No connected nodes available.")
-        return
-    target_node = nodes[0]
-    send_json_message(target_node["socket"], {"type": "SERVER TRAIN", "message": train_message}, target_node["name"])
-
-def handle_client(client_socket, address):
-    try:
-        while True:
-            data = client_socket.recv(4096).decode()
-            if not data:
-                break
-            try:
-                message = json.loads(data)
-                if not handle_client_message(client_socket, address, message):
-                    break
-            except json.JSONDecodeError:
-                print("Invalid message format received.")
-    except Exception as e:
-        print(f"Error handling client: {e}")
-    finally:
-        client_socket.close()
-
-@app.route('/get_json', methods=['GET'])
-def get_json():
-    node_name = request.args.get("node")
-    json_name = request.args.get("json")
-
-    if not node_name or not json_name:
-        return jsonify({"error": "Missing 'node' or 'json' parameter"}), 400
-
-    json_key = f"{node_name}:{json_name}"
-
-    target_node = next((node for node in nodes if node["name"] == node_name), None)
-    if not target_node:
-        return jsonify({"error": f"Node '{node_name}' not found"}), 404
-
-    send_json_message(target_node["socket"], {
-        "type": "GET_JSON",
-        "name": node_name,
-        "json_name": json_name
-    }, node_name)
-
-    timeout = 5
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if json_key in json_responses:
-            json_data = json_responses.pop(json_key)
-            return jsonify(json_data)
-
-        time.sleep(0.1)
-
-    return jsonify({"error": "Timeout waiting for client response"}), 504
-
-@app.route('/nodes', methods=['GET'])
-def get_nodes():
-    node_names = [node["name"] for node in nodes]
-    return jsonify({"nodes": node_names})
-
-@app.route('/images', methods=['GET'])
-def get_images():
-    image_files = []
-    for root, _, files in os.walk("./images"):
-        for file in files:
-            if file.endswith((".jpg", ".jpeg", ".png")):
-                image_files.append(os.path.join(root, file))
-    return jsonify({"images": image_files})
-
-@app.route('/image', methods=['GET'])
-def get_image():
-    image_path = request.args.get('imagePath')
-    if os.path.exists(image_path):
-        return send_file(image_path, mimetype='image/jpeg')
-    return jsonify({"error": "Image not found"}), 404
-
-@app.route('/train', methods=['POST'])
-def train():
-    data = request.json
-    model_name = data["modelName"]
-    model_type = data["modelType"]
-    epochs = data["epochs"]
-    batch_size = data["batchSize"]
-    learning_rate = data["learningRate"]
-    train_message = {
-        "name": model_name,
-        "type": model_type,
-        "epochs": epochs,
-        "batchSize": batch_size,
-        "learningRate": learning_rate
-    }
-    forward_train_message(train_message)
-    return jsonify({"status": "Training initiated"})
-
-@app.route('/inference', methods=['POST'])
-def inference():
-    return jsonify({"error": "Inference not implemented"}), 501
+import client_server
+import api
+import state
 
 def signal_handler(sig, frame):
-    global client_socket
     print("\nShutting down the server gracefully...")
-    if client_socket:
-        client_socket.close()
+    if state.client_socket:
+        state.client_socket.close()
     sys.exit(0)
-
-def start_client_server(host, port):
-    global client_socket
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    client_socket.bind((host, port))
-    client_socket.listen()
-    print(f"Client server listening on {host}:{port}")
-
-    while True:
-        try:
-            client_conn, address = client_socket.accept()
-            client_thread = threading.Thread(target=handle_client, args=(client_conn, address))
-            client_thread.start()
-        except OSError:
-            break
-
-def start_flask_server():
-    app.run(host=DEFAULT_HOST, port=API_PORT, debug=True, use_reloader=False)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
-
-    client_thread = threading.Thread(target=start_client_server, args=(DEFAULT_HOST, CLIENT_PORT))
-    flask_thread = threading.Thread(target=start_flask_server)
-
+    client_thread = threading.Thread(target=client_server.start_client_server, args=(state.DEFAULT_HOST, state.CLIENT_PORT))
+    flask_thread = threading.Thread(target=api.app.run, kwargs={"host": state.DEFAULT_HOST, "port": state.API_PORT, "debug": True, "use_reloader": False})
     client_thread.start()
     flask_thread.start()
-
     client_thread.join()
     flask_thread.join()

@@ -25,5 +25,5 @@ Choices:
 5. Inference
 
 ```sh
-python3 inference.py --image-path images/test/cow/jim-mIuqj6OfAhs-unsplash.jpg --model-path my_custom_model.pth --base-model mobilenet --class-names-path classes.txt --report inference_report.json
+python3 inference.py --image-path images/test/cow/illiya-vjestica-PCf58A5427A-unsplash.jpg --model-path models/test/test.pth --base-model mobilenet --class-names-path images/classes.txt --report models/test/inference.json
 ```
