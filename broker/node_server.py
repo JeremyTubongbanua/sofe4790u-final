@@ -23,7 +23,7 @@ def register_node(client_socket, address, node_name):
         "port": address[1],
         "models": []
     }
-    nodes.append(node_info)
+    nodes.append({"socket": client_socket, **node_info})
     send_json_message(client_socket, {"type": "SERVER ACK"}, node_name)
 
 def send_json_message(client_socket, response, target_name=None):
@@ -37,7 +37,6 @@ def send_json_message(client_socket, response, target_name=None):
 def handle_client_message(client_socket, address, message):
     msg_type = message["type"]
     node_name = message.get("name")
-
     log_message("RECEIVE", node_name, message)
 
     if msg_type == "CLIENT CONNECT":
@@ -50,13 +49,39 @@ def handle_client_message(client_socket, address, message):
         return False
     return True
 
+def forward_train_message(train_message):
+    if not nodes:
+        print("No connected nodes available.")
+        return
+    target_node = nodes[0]
+    send_json_message(target_node["socket"], {"type": "SERVER TRAIN", "message": train_message}, target_node["name"])
+
+def handle_api_message(api_socket):
+    try:
+        while True:
+            data = api_socket.recv(1024).decode()
+            if not data:
+                break
+            try:
+                message = json.loads(data)
+                if message["type"] == "API TRAIN":
+                    log_message("RECEIVE", "API", message)
+                    train_message = message["message"]
+                    forward_train_message(train_message)
+                    send_json_message(api_socket, {"type": "SERVER ACK"})
+            except json.JSONDecodeError:
+                print("Invalid API message format received.")
+    except Exception as e:
+        print(f"Error handling API message: {e}")
+    finally:
+        api_socket.close()
+
 def handle_client(client_socket, address):
     try:
         while True:
             data = client_socket.recv(1024).decode()
             if not data:
                 break
-
             try:
                 message = json.loads(data)
                 if not handle_client_message(client_socket, address, message):
@@ -82,15 +107,18 @@ def start_server(host, port):
     server_socket.listen()
     print(f"Server listening on {host}:{port}")
 
-    # Set up signal handler for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
 
     while True:
         try:
+            api_socket, _ = server_socket.accept()
+            api_thread = threading.Thread(target=handle_api_message, args=(api_socket,))
+            api_thread.start()
             client_socket, address = server_socket.accept()
-            threading.Thread(target=handle_client, args=(client_socket, address)).start()
+            client_thread = threading.Thread(target=handle_client, args=(client_socket, address))
+            client_thread.start()
         except OSError:
-            break  # Socket closed, exit the loop
+            break
 
 if __name__ == "__main__":
     start_server(DEFAULT_HOST, DEFAULT_PORT)
