@@ -10,6 +10,16 @@ import os
 import sys
 import time
 
+def round_floats(obj, precision=4):
+    if isinstance(obj, float):
+        return round(obj, precision)
+    elif isinstance(obj, dict):
+        return {k: round_floats(v, precision) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [round_floats(i, precision) for i in obj]
+    else:
+        return obj
+
 def get_data_loaders(data_dir, batch_size=32):
     train_transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -83,9 +93,9 @@ def generate_report(report_path, args, epochs, epoch_results, model_path, total_
         "timestamp": datetime.datetime.now().isoformat(),
         "arguments": vars(args),
         "epochs": epochs,
-        "results": epoch_results,
+        "results": round_floats(epoch_results, 4),
         "model_save_path": model_path,
-        "total_training_time": total_time
+        "total_training_time": round(total_time, 4)
     }
     with open(report_path, 'w') as f:
         json.dump(report, f, indent=4)
@@ -116,14 +126,15 @@ def main(data_dir, base_model, epochs, batch_size, learning_rate, model_save_pat
                        f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.2f}%, "
                        f"Epoch Time: {epoch_time:.2f} seconds")
         print_and_log(output_file, log_message)
-        epoch_results.append({
+        epoch_results.append(round_floats({
             "epoch": epoch + 1,
             "train_loss": train_loss,
             "train_accuracy": train_accuracy,
             "test_loss": test_loss,
             "test_accuracy": test_accuracy,
             "epoch_time_seconds": epoch_time
-        })
+        }, 4))
+
 
     total_time = time.time() - total_start_time
     model_path = os.path.abspath(model_save_path)
