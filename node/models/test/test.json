@@ -1,0 +1,42 @@
+{
+    "timestamp": "2024-11-11T06:04:03.257385",
+    "arguments": {
+        "data_dir": "./images",
+        "base_model": "mobilenet",
+        "epochs": 3,
+        "batch_size": 32,
+        "learning_rate": 0.001,
+        "model_save_path": "models/test/test.pth",
+        "report": "models/test/test.json",
+        "output_file": "models/test/test.txt"
+    },
+    "epochs": 3,
+    "results": [
+        {
+            "epoch": 1,
+            "train_loss": 0.525,
+            "train_accuracy": 75.2688,
+            "test_loss": 0.1071,
+            "test_accuracy": 91.6667,
+            "epoch_time_seconds": 17.7693
+        },
+        {
+            "epoch": 2,
+            "train_loss": 0.1755,
+            "train_accuracy": 93.5484,
+            "test_loss": 0.7364,
+            "test_accuracy": 89.5833,
+            "epoch_time_seconds": 17.663
+        },
+        {
+            "epoch": 3,
+            "train_loss": 0.217,
+            "train_accuracy": 91.9355,
+            "test_loss": 0.2183,
+            "test_accuracy": 93.75,
+            "epoch_time_seconds": 17.6207
+        }
+    ],
+    "model_save_path": "/home/jeremy/GitHub/sofe4790u-final/node/models/test/test.pth",
+    "total_training_time": 53.0543
+}

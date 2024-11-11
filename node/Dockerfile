@@ -1,14 +1,13 @@
-FROM ubuntu:20.04
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY . .
+COPY node_client.py inference.py train.py utils.py ./
 
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y python3 python3-pip
+COPY ../get_dataset.py ./
 
-RUN pip3 install -r requirements.txt
+RUN pip install torch torchvision pillow requests
 
 RUN python3 get_dataset.py
 
-CMD ["/bin/bash"]
+ENTRYPOINT ["python3", "node_client.py"]

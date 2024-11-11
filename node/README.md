@@ -27,3 +27,11 @@ Choices:
 ```sh
 python3 inference.py --image-path images/test/cow/illiya-vjestica-PCf58A5427A-unsplash.jpg --model-path models/test/test.pth --base-model mobilenet --class-names-path images/classes.txt --report models/test/inference.json
 ```
+
+## Dockerfile
+
+```bash
+sudo docker build -t node-client .
+sudo docker run -d --name client0 node-client --host 127.0.0.1 --port 8000 --name node0
+sudo docker run -d --name client1 node-client --host 127.0.0.1 --port 8000 --name node1
+```

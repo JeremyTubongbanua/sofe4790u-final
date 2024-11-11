@@ -1,0 +1,26 @@
+{
+    "timestamp": "2024-11-11T22:05:58.388585",
+    "arguments": {
+        "image_path": "images/test/cow/illiya-vjestica-PCf58A5427A-unsplash.jpg",
+        "model_path": "models/test/test.pth",
+        "base_model": "mobilenet",
+        "class_names_path": "images/classes.txt",
+        "report": "models/test/inference1.json"
+    },
+    "image": "images/test/cow/illiya-vjestica-PCf58A5427A-unsplash.jpg",
+    "predicted_class": "cow",
+    "output": [
+        [
+            "cow",
+            0.9997462630271912
+        ],
+        [
+            "dog",
+            0.0002534393279347569
+        ],
+        [
+            "chicken",
+            2.1478049916368036e-07
+        ]
+    ]
+}

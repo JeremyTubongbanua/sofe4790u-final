@@ -1,8 +1,15 @@
-FROM ubuntu:20.04
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY . .
+COPY api.py client_server.py node_server.py state.py utils.py ./
 
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y python3 python3-pip
+COPY ../get_dataset.py ./
+
+RUN pip install flask flask-cors requests
+
+RUN python3 get_dataset.py
+
+EXPOSE 8000 8001
+
+ENTRYPOINT ["python3", "node_server.py"]

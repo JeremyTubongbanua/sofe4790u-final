@@ -1,0 +1,6 @@
+Epoch [1/3], Train Loss: 0.5250, Train Accuracy: 75.27%, Test Loss: 0.1071, Test Accuracy: 91.67%, Epoch Time: 17.77 seconds
+Epoch [2/3], Train Loss: 0.1755, Train Accuracy: 93.55%, Test Loss: 0.7364, Test Accuracy: 89.58%, Epoch Time: 17.66 seconds
+Epoch [3/3], Train Loss: 0.2170, Train Accuracy: 91.94%, Test Loss: 0.2183, Test Accuracy: 93.75%, Epoch Time: 17.62 seconds
+Model saved as /home/jeremy/GitHub/sofe4790u-final/node/models/test/test.pth
+Total training time: 53.05 seconds
+Report saved to models/test/test.json
