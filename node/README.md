@@ -2,7 +2,7 @@
 
 ## How to Run
 
-1. Unzip `images.zip`
+1. Unzip `dataset.zip`
 
 2. Run the virtual environment by running `source venv/bin/activate`
 
