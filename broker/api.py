@@ -75,6 +75,7 @@ def train():
 @app.route('/inference', methods=['POST'])
 def inference():
     data = request.json
+    node_name = data.get("node")
     image_path = data["imagePath"]
     model_path = data["modelPath"]
     base_model = data["baseModel"]
@@ -90,9 +91,9 @@ def inference():
         "class_names_path": class_names_path,
         "report_path": report_path
     }
-    if not state.nodes:
-        return jsonify({"error": "No connected nodes available"}), 500
-    target_node = state.nodes[0]
+    target_node = next((node for node in state.nodes if node["name"] == node_name), None)
+    if not target_node:
+        return jsonify({"error": f"Node '{node_name}' not found"}), 404
     send_json_message(target_node["socket"], inference_message, target_node["name"])
     timeout = 10
     start_time = time.time()
@@ -102,3 +103,4 @@ def inference():
             return jsonify(inference_result)
         time.sleep(0.1)
     return jsonify({"error": "Timeout waiting for inference response"}), 504
+
