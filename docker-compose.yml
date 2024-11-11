@@ -4,8 +4,8 @@ services:
   node0:
     build:
       context: ./node
-      dockerfile: ./node/Dockerfile
+      dockerfile: Dockerfile
   broker:
     build:
       context: ./broker
-      dockerfile: ./broker/Dockerfile
+      dockerfile: Dockerfile

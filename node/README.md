@@ -11,7 +11,7 @@
 4. Run the program by running
 
 ```sh
-python3 train.py --data-dir ./images --base-model mobilenet --epochs 3 --batch-size 32 --learning-rate 0.001 --report my_custom_model_report.json --model-save-path my_custom_model.pth
+python3 train.py --data-dir ./images --base-model mobilenet --epochs 3 --batch-size 32 --learning-rate 0.001 --report test.json --model-save-path test.pth
 ```
 
 Choices:
