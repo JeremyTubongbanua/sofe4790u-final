@@ -21,7 +21,7 @@ curl -X POST "http://127.0.0.1:8001/train" \
   "node": "node0",
   "modelName": "test",
   "modelType": "mobilenet",
-  "epochs": 3,
+  "epochs": 1,
   "batchSize": 32,
   "learningRate": 0.001
 }'

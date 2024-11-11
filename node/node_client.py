@@ -5,6 +5,11 @@ import signal
 import sys
 import subprocess
 import os
+import threading
+import time
+
+log_cache = {}
+log_cache_lock = threading.Lock()
 
 def log_message(action, message):
     print(f"[LOG] Action: {action}, Message: {message}")
@@ -28,6 +33,27 @@ def notify_termination(host, port, name):
         if response_data.get("type") == "SERVER ACK":
             print("Disconnected successfully.")
 
+def monitor_log_file(model_name):
+    file_path = f"models/{model_name}/{model_name}.txt"
+    if not os.path.exists(file_path):
+        return
+
+    with open(file_path, "r") as f:
+        f.seek(0, os.SEEK_END)
+        while True:
+            where = f.tell()
+            line = f.readline()
+            if not line:
+                time.sleep(0.1)
+                f.seek(where)
+            else:
+                with log_cache_lock:
+                    if model_name not in log_cache:
+                        log_cache[model_name] = []
+                    log_cache[model_name].append(line.strip())
+                    log_cache[model_name] = log_cache[model_name][-100:]
+
+
 def run_training_process(train_message):
     model_name = train_message["name"]
     base_model = train_message["type"]
@@ -40,6 +66,9 @@ def run_training_process(train_message):
     report_path = f"models/{model_name}/{model_name}.json"
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+    # Start a thread to monitor the log file
+    threading.Thread(target=monitor_log_file, args=(model_name,), daemon=True).start()
 
     command = [
         "python3", "train.py",
@@ -59,7 +88,10 @@ def run_training_process(train_message):
         process = subprocess.Popen(command, stdout=f, stderr=subprocess.STDOUT)
         process.wait()
 
-    return model_name
+    log_message("INFO", f"Training completed for model: {model_name}")
+
+def handle_train_request(train_message):
+    threading.Thread(target=run_training_process, args=(train_message,), daemon=True).start()
 
 def handle_server_message(client_socket, message):
     msg_type = message["type"]
@@ -67,9 +99,24 @@ def handle_server_message(client_socket, message):
     if msg_type == "SERVER TRAIN":
         log_message("RECEIVE", message)
         train_message = message["message"]
-        model_name = run_training_process(train_message)
-        response = {"type": "CLIENT TRAIN", "message": model_name}
+        handle_train_request(train_message)
+        response = {"type": "CLIENT TRAIN STARTED", "message": train_message["name"]}
         send_json_message(client_socket, response)
+
+    elif msg_type == "GET JSON":
+        json_token = message["jsonToken"]
+        json_path = f"models/{json_token}/{json_token}.json"
+        try:
+            if os.path.exists(json_path):
+                with open(json_path, 'r') as f:
+                    json_content = json.load(f)
+                response = {"type": "CLIENT JSON", "content": json_content}
+            else:
+                response = {"type": "CLIENT JSON", "content": {"error": "JSON file not found"}}
+            send_json_message(client_socket, response)
+        except Exception as e:
+            error_response = {"type": "CLIENT JSON", "content": {"error": f"Error reading JSON file: {str(e)}"}}
+            send_json_message(client_socket, error_response)
 
 def start_client(host, port, name):
     def signal_handler(sig, frame):

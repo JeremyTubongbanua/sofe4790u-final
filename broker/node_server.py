@@ -3,9 +3,10 @@ import threading
 import json
 import signal
 import sys
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 import os
+import select
 
 # Configuration
 DEFAULT_HOST = "127.0.0.1"
@@ -88,21 +89,40 @@ def handle_client(client_socket, address):
     finally:
         client_socket.close()
 
+import select
+
 @app.route('/status', methods=['GET'])
 def get_status():
-    status_token = request.args.get('statusToken')
-    txt_token = request.args.get('txt')
+    node_name = request.args.get('node')
+    json_token = request.args.get('json')
 
-    if txt_token:
-        file_path = f"models/{txt_token}/{txt_token}.txt"
-    else:
-        file_path = f"{status_token}.txt"
+    if not node_name or not json_token:
+        return jsonify({"error": "Missing node or json parameter"}), 400
 
-    if os.path.exists(file_path):
-        with open(file_path, "r") as f:
-            content = f.read()
-        return jsonify({"txt": content})
-    return jsonify({"error": "File not found"}), 404
+    target_node = next((node for node in nodes if node["name"] == node_name), None)
+    if not target_node:
+        return jsonify({"error": "Node not found"}), 404
+
+    message = {"type": "GET JSON", "jsonToken": json_token}
+    send_json_message(target_node["socket"], message, target_node["name"])
+
+    ready = select.select([target_node["socket"]], [], [], 5)
+    if ready[0]:
+        try:
+            data = b""
+            while True:
+                chunk = target_node["socket"].recv(8192)
+                if not chunk:
+                    break
+                data += chunk
+
+            response = json.loads(data.decode())
+            if response.get("type") == "CLIENT JSON":
+                return jsonify(response["content"])
+        except Exception as e:
+            return jsonify({"error": f"Error receiving JSON data: {str(e)}"}), 500
+
+    return jsonify({"error": "Timeout or no response from node"}), 504
 
 
 @app.route('/nodes', methods=['GET'])

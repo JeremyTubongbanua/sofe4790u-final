@@ -94,9 +94,8 @@ def print_and_log(output_file, message):
     print(message)
     if output_file:
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        with open(output_file, "a") as f:
+        with open(output_file, "a", buffering=1) as f:  # Line buffering
             f.write(message + "\n")
-
 
 def main(data_dir, base_model, epochs, batch_size, learning_rate, model_save_path, report_path=None, output_file=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
