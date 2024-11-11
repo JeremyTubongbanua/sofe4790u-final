@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# node_client.py
 import socket
 import argparse
 import json
@@ -53,7 +55,6 @@ def monitor_log_file(model_name):
                     log_cache[model_name].append(line.strip())
                     log_cache[model_name] = log_cache[model_name][-100:]
 
-
 def run_training_process(train_message):
     model_name = train_message["name"]
     base_model = train_message["type"]
@@ -67,7 +68,6 @@ def run_training_process(train_message):
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
-    # Start a thread to monitor the log file
     threading.Thread(target=monitor_log_file, args=(model_name,), daemon=True).start()
 
     command = [
@@ -116,8 +116,6 @@ def handle_server_message(client_socket, message):
             response = {"type": "JSON_RESPONSE", "name": node_name, "json_name": json_name, "data": json_data}
 
         send_json_message(client_socket, response)
-
-
 
 def start_client(host, port, name):
     def signal_handler(sig, frame):

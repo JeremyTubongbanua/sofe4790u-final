@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# node_server.py
 import socket
 import threading
 import json
@@ -11,24 +13,19 @@ import time
 
 json_responses = {}
 
-# Configuration
 DEFAULT_HOST = "127.0.0.1"
 CLIENT_PORT = 8000
 API_PORT = 8001
 
-# Node state
 nodes = []
 client_socket = None
 
-# Flask API setup
 app = Flask(__name__)
 CORS(app)
 
-# Logging
 def log_message(action, target, message):
     print(f"[LOG] Action: {action}, Target: {target}, Message: {message}")
 
-# Node management
 def remove_node(node_name):
     global nodes
     nodes = [node for node in nodes if node["name"] != node_name]
@@ -43,7 +40,6 @@ def register_node(client_socket, address, node_name):
     nodes.append({"socket": client_socket, **node_info})
     send_json_message(client_socket, {"type": "SERVER ACK"}, node_name)
 
-# Message handling
 def send_json_message(client_socket, response, target_name=None):
     try:
         message = json.dumps(response)
@@ -80,7 +76,6 @@ def forward_train_message(train_message):
     target_node = nodes[0]
     send_json_message(target_node["socket"], {"type": "SERVER TRAIN", "message": train_message}, target_node["name"])
 
-# Client server handler
 def handle_client(client_socket, address):
     try:
         while True:
@@ -108,7 +103,6 @@ def get_json():
 
     json_key = f"{node_name}:{json_name}"
 
-    # Send the request to the client node
     target_node = next((node for node in nodes if node["name"] == node_name), None)
     if not target_node:
         return jsonify({"error": f"Node '{node_name}' not found"}), 404
@@ -119,7 +113,6 @@ def get_json():
         "json_name": json_name
     }, node_name)
 
-    # Wait for the client node response (polling for up to 5 seconds)
     timeout = 5
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -174,7 +167,6 @@ def train():
 def inference():
     return jsonify({"error": "Inference not implemented"}), 501
 
-# Server setup
 def signal_handler(sig, frame):
     global client_socket
     print("\nShutting down the server gracefully...")
@@ -201,7 +193,6 @@ def start_client_server(host, port):
 def start_flask_server():
     app.run(host=DEFAULT_HOST, port=API_PORT, debug=True, use_reloader=False)
 
-# Main execution
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# train.py
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -104,7 +106,7 @@ def print_and_log(output_file, message):
     print(message)
     if output_file:
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        with open(output_file, "a", buffering=1) as f:  # Line buffering
+        with open(output_file, "a", buffering=1) as f:
             f.write(message + "\n")
 
 def main(data_dir, base_model, epochs, batch_size, learning_rate, model_save_path, report_path=None, output_file=None):
@@ -134,7 +136,6 @@ def main(data_dir, base_model, epochs, batch_size, learning_rate, model_save_pat
             "test_accuracy": test_accuracy,
             "epoch_time_seconds": epoch_time
         }, 4))
-
 
     total_time = time.time() - total_start_time
     model_path = os.path.abspath(model_save_path)
