@@ -33,8 +33,11 @@ curl "http://127.0.0.1:8001/get_json?node=node0&json=test"
 
 ```bash
 curl -X POST http://127.0.0.1:8001/inference -H "Content-Type: application/json" -d '{
+  "node": "node1",
     "imagePath": "images/test/cow/illiya-vjestica-PCf58A5427A-unsplash.jpg",
-    "modelName": "test.pth",
-    "reportPath": "models/test/inference.json"
+    "modelPath": "models/test/test.pth",
+    "baseModel": "mobilenet",
+    "classNamesPath": "images/classes.txt",
+    "reportPath": "models/test/inference1.json"
 }'
 ```
