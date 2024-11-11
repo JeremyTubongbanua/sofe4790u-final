@@ -7,6 +7,9 @@ from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 import os
 import select
+import time
+
+json_responses = {}
 
 # Configuration
 DEFAULT_HOST = "127.0.0.1"
@@ -62,6 +65,12 @@ def handle_client_message(client_socket, address, message):
         remove_node(node_name)
         send_json_message(client_socket, {"type": "SERVER ACK"}, node_name)
         return False
+    elif msg_type == "JSON_RESPONSE":
+        node_name = message.get("name", "Unknown")
+        json_data = message["data"]
+        json_key = f"{node_name}:{message['json_name']}"
+        json_responses[json_key] = json_data
+        log_message("RECEIVE", node_name, json_data)
     return True
 
 def forward_train_message(train_message):
@@ -89,41 +98,38 @@ def handle_client(client_socket, address):
     finally:
         client_socket.close()
 
-import select
+@app.route('/get_json', methods=['GET'])
+def get_json():
+    node_name = request.args.get("node")
+    json_name = request.args.get("json")
 
-@app.route('/status', methods=['GET'])
-def get_status():
-    node_name = request.args.get('node')
-    json_token = request.args.get('json')
+    if not node_name or not json_name:
+        return jsonify({"error": "Missing 'node' or 'json' parameter"}), 400
 
-    if not node_name or not json_token:
-        return jsonify({"error": "Missing node or json parameter"}), 400
+    json_key = f"{node_name}:{json_name}"
 
+    # Send the request to the client node
     target_node = next((node for node in nodes if node["name"] == node_name), None)
     if not target_node:
-        return jsonify({"error": "Node not found"}), 404
+        return jsonify({"error": f"Node '{node_name}' not found"}), 404
 
-    message = {"type": "GET JSON", "jsonToken": json_token}
-    send_json_message(target_node["socket"], message, target_node["name"])
+    send_json_message(target_node["socket"], {
+        "type": "GET_JSON",
+        "name": node_name,
+        "json_name": json_name
+    }, node_name)
 
-    ready = select.select([target_node["socket"]], [], [], 5)
-    if ready[0]:
-        try:
-            data = b""
-            while True:
-                chunk = target_node["socket"].recv(8192)
-                if not chunk:
-                    break
-                data += chunk
+    # Wait for the client node response (polling for up to 5 seconds)
+    timeout = 5
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if json_key in json_responses:
+            json_data = json_responses.pop(json_key)
+            return jsonify(json_data)
 
-            response = json.loads(data.decode())
-            if response.get("type") == "CLIENT JSON":
-                return jsonify(response["content"])
-        except Exception as e:
-            return jsonify({"error": f"Error receiving JSON data: {str(e)}"}), 500
+        time.sleep(0.1)
 
-    return jsonify({"error": "Timeout or no response from node"}), 504
-
+    return jsonify({"error": "Timeout waiting for client response"}), 504
 
 @app.route('/nodes', methods=['GET'])
 def get_nodes():

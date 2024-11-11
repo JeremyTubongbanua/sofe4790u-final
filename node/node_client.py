@@ -103,20 +103,21 @@ def handle_server_message(client_socket, message):
         response = {"type": "CLIENT TRAIN STARTED", "message": train_message["name"]}
         send_json_message(client_socket, response)
 
-    elif msg_type == "GET JSON":
-        json_token = message["jsonToken"]
-        json_path = f"models/{json_token}/{json_token}.json"
-        try:
-            if os.path.exists(json_path):
-                with open(json_path, 'r') as f:
-                    json_content = json.load(f)
-                response = {"type": "CLIENT JSON", "content": json_content}
-            else:
-                response = {"type": "CLIENT JSON", "content": {"error": "JSON file not found"}}
-            send_json_message(client_socket, response)
-        except Exception as e:
-            error_response = {"type": "CLIENT JSON", "content": {"error": f"Error reading JSON file: {str(e)}"}}
-            send_json_message(client_socket, error_response)
+    elif msg_type == "GET_JSON":
+        json_name = message["json_name"]
+        node_name = message["name"]
+        file_path = f"models/{json_name}/{json_name}.json"
+
+        if not os.path.exists(file_path):
+            response = {"type": "ERROR", "name": node_name, "json_name": json_name, "message": f"File '{file_path}' not found"}
+        else:
+            with open(file_path, "r") as f:
+                json_data = json.load(f)
+            response = {"type": "JSON_RESPONSE", "name": node_name, "json_name": json_name, "data": json_data}
+
+        send_json_message(client_socket, response)
+
+
 
 def start_client(host, port, name):
     def signal_handler(sig, frame):
