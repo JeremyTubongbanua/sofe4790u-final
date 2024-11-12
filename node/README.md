@@ -31,7 +31,9 @@ python3 inference.py --image-path images/test/cow/illiya-vjestica-PCf58A5427A-un
 ## Dockerfile
 
 ```bash
-sudo docker build -t node-client .
-sudo docker run -d --name client0 node-client --host 127.0.0.1 --port 8000 --name node0
-sudo docker run -d --name client1 node-client --host 127.0.0.1 --port 8000 --name node1
+sudo docker build -t node .
+sudo docker run --rm --name node0 node --host 127.0.0.1 --port 8000 --name node0
+sudo docker run --rm -d --name node0 --entrypoint python3 node node_client.py --host 192.168.8.125 --port 8000 --name node0
+sudo docker logs -f node0
+sudo docker run --rm --name node0 node --host 172.17.0.2 --port 8000 --name node0
 ```

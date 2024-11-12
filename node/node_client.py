@@ -1,3 +1,5 @@
+# node_client.py
+
 import socket
 import argparse
 import json
@@ -10,7 +12,7 @@ import time
 
 log_cache = {}
 log_cache_lock = threading.Lock()
-client_socket = None  # Initialize as global
+client_socket = None
 
 def log_message(action, message):
     print(f"[LOG] Action: {action}, Message: {message}")

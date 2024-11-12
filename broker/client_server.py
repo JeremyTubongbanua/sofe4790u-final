@@ -46,7 +46,7 @@ def handle_client_message(client_socket, address, message):
         state.json_responses[json_key] = json_data
         log_message("RECEIVE", node_name, json_data)
     else:
-        log_message("WARNING", f"Unhandled message type: {msg_type}")
+        log_message("WARNING", f"Unhandled message type: {msg_type}", "")
 
     return True
 

@@ -28,7 +28,7 @@ curl -X POST "http://127.0.0.1:8001/train" \
 ```
 
 ```bash
-curl "http://127.0.0.1:8001/get_json?node=node0&json=test"
+curl "http://192.168.8.125:8001/get_json?node=node2&json=test"
 ```
 
 ```bash
@@ -40,4 +40,9 @@ curl -X POST http://127.0.0.1:8001/inference -H "Content-Type: application/json"
     "classNamesPath": "images/classes.txt",
     "reportPath": "models/test/inference1.json"
 }'
+```
+
+```bash
+sudo docker build -t broker .
+sudo docker run --rm --name broker -p 8000:8000 -p 8001:8001 broker
 ```
