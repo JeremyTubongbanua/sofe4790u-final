@@ -21,7 +21,7 @@ export default function NodeSelector({ value, onChange, setModels }) {
     const selectedNode = nodes.find((node) => node.name === nodeName);
     if (selectedNode) {
       // Use a deep copy of the models array to ensure React detects the change
-      setModels([...selectedNode.models]);
+      setModels([...new Set(selectedNode.models)]);
       console.log("Models for selected node (deep copy):", [...selectedNode.models]);
     } else {
       setModels([]);
