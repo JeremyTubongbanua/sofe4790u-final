@@ -197,9 +197,33 @@ curl -X POST http://192.168.8.125:8001/inference -H "Content-Type: application/j
   "modelName": "test123"
 }'
 
+## =====
+
+## Get Nodes
+
+```bash
+curl "http://192.168.8.125:8001/nodes"
+```
+
+Response
+
+```json
+{
+  "nodes": [
+    {
+      "models": [
+        "test"
+      ],
+      "name": "node0"
+    }
+  ]
+}
+```
+
 ## Train
 
 Train curl command
+
 ```bash
 curl -X POST "http://192.168.8.125:8001/train" -H "Content-Type: application/json" -d '{
   "node": "node0",
@@ -211,7 +235,7 @@ curl -X POST "http://192.168.8.125:8001/train" -H "Content-Type: application/jso
 }'
 ```
 
-Result
+Response
 
 ```json
 {
@@ -225,6 +249,7 @@ Result
 ## Inference
 
 Inference curl command
+
 ```bash
 curl -X POST http://192.168.8.125:8001/inference -H "Content-Type: application/json" -d '{
   "node": "node0",
@@ -232,6 +257,8 @@ curl -X POST http://192.168.8.125:8001/inference -H "Content-Type: application/j
   "modelName": "test123"
 }'
 ```
+
+Response
 
 ```json
 {

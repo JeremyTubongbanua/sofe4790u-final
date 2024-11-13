@@ -51,10 +51,26 @@ def handle_client_message(client_socket, address, message):
         state.update_node_models(node_name, models)
         log_message("INFO", f"Updated node info for {node_name}: models={models}", "")
     elif msg_type == "TRAINING_COMPLETED":
+        node_name = message.get("name")
         train_key = message.get("train_key")
         model_name = message.get("model_name")
         log_message("INFO", f"Training completed for {model_name}", "")
         state.json_responses[train_key] = message.get("data")
+        # also add the new model to state
+        print(f"")
+        for node in state.nodes:
+            if node["name"] == node_name:
+                models = node.get("models", [])
+                models.append(model_name)
+                state.update_node_models(node_name, models)
+        print(f"state: {state.nodes}")
+    elif msg_type == "NEW MODEL ADDED":
+        new_model = message.get("new_model")
+        models = message.get("models", [])
+        if new_model:
+            models.append(new_model)
+        log_message("INFO", f"New model '{new_model}' added for node '{node_name}'", "")
+        # state.update_node_models(node_name, models)
     else:
         log_message("WARNING", f"Unhandled message type: {msg_type}", "")
 

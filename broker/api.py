@@ -82,7 +82,7 @@ def train():
         "train_key": train_key
     }
     forward_train_message(target_node, train_message)
-    timeout = 60
+    timeout = 120
     start_time = time.time()
     while time.time() - start_time < timeout:
         if train_key in state.json_responses:
