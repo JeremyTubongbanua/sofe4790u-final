@@ -40,17 +40,28 @@ def handle_client_message(client_socket, address, message):
         elif "inference_key" in message:
             json_key = message["inference_key"]
         else:
-            log_message("ERROR", f"Unknown JSON_RESPONSE format: {message}")
+            log_message("ERROR", f"Unknown JSON_RESPONSE format: {message}", "")
             return True  # Continue handling other messages
 
         state.json_responses[json_key] = json_data
         log_message("RECEIVE", node_name, json_data)
+    elif msg_type == "NODE INFO":
+        node_name = message["name"]
+        models = message.get("models", [])
+        state.update_node_models(node_name, models)
+        log_message("INFO", f"Updated node info for {node_name}: models={models}", "")
+    elif msg_type == "TRAINING_COMPLETED":
+        train_key = message.get("train_key")
+        model_name = message.get("model_name")
+        log_message("INFO", f"Training completed for {model_name}", "")
+        state.json_responses[train_key] = message.get("data")
     else:
         log_message("WARNING", f"Unhandled message type: {msg_type}", "")
 
     return True
 
 def handle_client(client_socket, address):
+    node_name = "Unknown"
     try:
         while True:
             data = client_socket.recv(4096).decode()
@@ -61,28 +72,30 @@ def handle_client(client_socket, address):
                 for msg in messages:
                     if msg:
                         message = json.loads(msg)
+                        node_name = message.get("name", "Unknown")  # Set node_name
                         if not handle_client_message(client_socket, address, message):
                             break
             except json.JSONDecodeError:
-                log_message("ERROR", "Invalid message format received.")
+                log_message("ERROR", "Invalid message format received.", "")
     except Exception as e:
-        log_message("ERROR", f"Error handling client: {e}")
+        log_message("ERROR", f"Error handling client: {e}", "")
     finally:
         client_socket.close()
-        remove_node(message.get("name", "Unknown"))
+        remove_node(node_name)
 
-def forward_train_message(train_message):
-    if not state.nodes:
-        log_message("ERROR", "No connected nodes available.")
-        return
-    target_node = state.nodes[0]
-    send_json_message(target_node["socket"], {"type": "SERVER TRAIN", "message": train_message}, target_node["name"])
 
-def forward_inference_message(inference_message):
+def forward_train_message(target_node, train_message):
+    """Forwrads the train message to the first connected node.
+    """
     if not state.nodes:
-        log_message("ERROR", "No connected nodes available.")
+        log_message("ERROR", "No connected nodes available.", "")
         return
-    target_node = state.nodes[0]
+    send_json_message(target_node["socket"], train_message, target_node["name"])
+
+def forward_inference_message(target_node, inference_message):
+    if not state.nodes:
+        log_message("ERROR", "No connected nodes available.", "")
+        return
     send_json_message(target_node["socket"], inference_message, target_node["name"])
 
 def start_client_server(host, port):

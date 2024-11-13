@@ -14,13 +14,29 @@ log_cache = {}
 log_cache_lock = threading.Lock()
 client_socket = None
 
+def get_models():
+    models_dir = "models"
+    if not os.path.exists(models_dir):
+        return []
+    return [name for name in os.listdir(models_dir) if os.path.isdir(os.path.join(models_dir, name))]
+
+def send_node_info():
+    global client_socket
+    models = get_models()
+    message = {
+        "type": "NODE INFO",
+        "name": args.name,
+        "models": models
+    }
+    send_json_message(message)
+
 def log_message(action, message):
     print(f"[LOG] Action: {action}, Message: {message}")
 
 def send_json_message(message):
     global client_socket
     try:
-        json_message = json.dumps(message).encode()
+        json_message = (json.dumps(message) + '\n').encode()
         client_socket.sendall(json_message)
         log_message("SEND", message)
     except Exception as e:
@@ -62,11 +78,12 @@ def monitor_log_file(model_name):
                     log_cache[model_name] = log_cache[model_name][-100:]
 
 def run_training_process(train_message):
-    model_name = train_message["name"]
-    base_model = train_message["type"]
+    model_name = train_message["modelName"]
+    base_model = train_message["modelType"]
     epochs = train_message["epochs"]
     batch_size = train_message["batchSize"]
     learning_rate = train_message["learningRate"]
+    train_key = train_message["train_key"]
     output_file = f"models/{model_name}/{model_name}.txt"
     model_save_path = f"models/{model_name}/{model_name}.pth"
     report_path = f"models/{model_name}/{model_name}.json"
@@ -88,14 +105,52 @@ def run_training_process(train_message):
         process = subprocess.Popen(command, stdout=f, stderr=subprocess.STDOUT)
         process.wait()
     log_message("INFO", f"Training completed for model: {model_name}")
+    with open(output_file, "r") as f:
+        output_contents = f.read()
+    response = {
+        "type": "TRAINING_COMPLETED",
+        "train_key": train_key,
+        "model_name": model_name,
+        "data": {
+            "model_path": model_save_path,
+            "report_path": report_path,
+            "output_file": output_file,
+            "output_contents": output_contents
+        }
+    }
+    send_json_message(response)
 
 def run_inference_process(inference_message):
     global client_socket
+
+    print(f"Running inference process")
+
     image_path = inference_message["image_path"]
-    model_path = inference_message["model_path"]
-    base_model = inference_message["base_model"]
-    class_names_path = inference_message["class_names_path"]
-    report_path = inference_message["report_path"]
+    model_name = inference_message["model_name"]
+    train_report_path = f"models/{model_name}/{model_name}.json"
+    # print(f"train_report_path: {train_report_path}")
+    # print(f"model_name: {model_name}")
+    # print(f"image_path: {image_path}")
+    # read report_path for the base_model, class_names_path, and the model_path
+    with open(train_report_path, "r") as f:
+        report = json.load(f)
+    model_path = report["model_save_path"]
+    base_model = report["arguments"]["base_model"]
+    class_names_path = report["arguments"]["data_dir"] + "/classes.txt"
+    # base_model = inference_message["base_model"]
+    # class_names_path = inference_message["class_names_path"]
+    report_path = f"models/{model_name}/{inference_message['inference_key']}.json"
+
+    # lo all variables
+    # print(f"image_path: {image_path}")
+    # print(f"model_path: {model_path}")
+    # print(f"base_model: {base_model}")
+    # print(f"class_names_path: {class_names_path}")
+    # print(f"train_report_path: {train_report_path}")
+    # print(f"report_path: {report_path}")
+
+
+
     command = [
         "python3", "inference.py",
         "--image-path", image_path,
@@ -133,11 +188,9 @@ def handle_server_message(message):
     msg_type = message.get("type")
     if msg_type == "SERVER TRAIN":
         log_message("RECEIVE", message)
-        train_message = message.get("message")
+        train_message = message
         if train_message:
             handle_train_request(train_message)
-            response = {"type": "CLIENT TRAIN STARTED", "message": train_message["name"]}
-            send_json_message(response)
     elif msg_type == "GET_JSON":
         json_name = message.get("json_name")
         node_name = message.get("name")
@@ -164,10 +217,7 @@ def handle_server_message(message):
         inference_message = {
             "inference_key": message["inference_key"],
             "image_path": message["image_path"],
-            "model_path": message["model_path"],
-            "base_model": message["base_model"],
-            "class_names_path": message["class_names_path"],
-            "report_path": message["report_path"]
+            "model_name": message["model_name"],
         }
         handle_inference_request(inference_message)
 
@@ -182,6 +232,7 @@ def start_client(host, port, name):
         client_socket.connect((host, port))
         connect_message = {"type": "CLIENT CONNECT", "name": name}
         send_json_message(connect_message)
+        send_node_info()
         response = client_socket.recv(1024)
         if response:
             response_data = json.loads(response.decode())

@@ -15,8 +15,8 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
-    client_thread = threading.Thread(target=client_server.start_client_server, args=(state.DEFAULT_HOST, state.CLIENT_PORT))
-    flask_thread = threading.Thread(target=api.app.run, kwargs={"host": state.DEFAULT_HOST, "port": state.API_PORT, "debug": True, "use_reloader": False})
+    client_thread = threading.Thread(target=client_server.start_client_server, args=(state.HOST, state.SERVER_PORT))
+    flask_thread = threading.Thread(target=api.app.run, kwargs={"host": state.HOST, "port": state.API_PORT, "debug": True, "use_reloader": False})
     client_thread.start()
     flask_thread.start()
     client_thread.join()
