@@ -42,6 +42,17 @@ def send_json_message(message):
     except Exception as e:
         print(f"Error sending message: {e}")
 
+def notify_new_model(model_name):
+    models = get_models()
+    message = {
+        "type": "NEW MODEL ADDED",
+        "name": args.name,
+        "new_model": model_name,
+        "models": models
+    }
+    send_json_message(message)
+    log_message("INFO", f"Notified server of new model: {model_name}")
+
 def notify_termination(host, port, name):
     global client_socket
     try:
@@ -109,6 +120,7 @@ def run_training_process(train_message):
         output_contents = f.read()
     response = {
         "type": "TRAINING_COMPLETED",
+        "name": args.name,
         "train_key": train_key,
         "model_name": model_name,
         "data": {
@@ -119,6 +131,7 @@ def run_training_process(train_message):
         }
     }
     send_json_message(response)
+    notify_new_model(model_name)
 
 def run_inference_process(inference_message):
     global client_socket
@@ -214,11 +227,7 @@ def handle_server_message(message):
         send_json_message(response)
     elif msg_type == "SERVER INFERENCE":
         log_message("RECEIVE", message)
-        inference_message = {
-            "inference_key": message["inference_key"],
-            "image_path": message["image_path"],
-            "model_name": message["model_name"],
-        }
+        inference_message = message
         handle_inference_request(inference_message)
 
 def start_client(host, port, name):
